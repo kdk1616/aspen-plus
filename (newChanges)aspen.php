@@ -1,0 +1,3220 @@
+<head>
+	<link rel="shortcut icon" href="logo.png"/>
+	
+	<title>Aspen +</title>
+
+<script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async=""></script>
+<link rel="manifest" href="manifest.json" /><!--Local manifest (one for messageboard is on server root)-->
+<script>
+    var OneSignal = window.OneSignal || [];
+    OneSignal.push(function() {
+      OneSignal.init({
+        appId: "67256b55-23b1-4706-8f70-7383fc160be0",
+  		safari_web_id: "web.onesignal.auto.4a2f472e-2de1-469e-8f55-0b3384f6ae6c"
+		
+	  
+  	});
+	
+	
+      OneSignal.on('subscriptionChange', function(isSubscribed) {
+         if (isSubscribed) {
+           // The user is subscribed
+           //   Either the user subscribed for the first time
+           //   Or the user was subscribed -> unsubscribed -> subscribed
+           OneSignal.getUserId( function(userId) {
+             // Make a POST call to your server with the user ID
+			 
+  			 document.cookie = "notificationToken=" + userId + "; expires=Thu, 01 Jan 2120 00:00:00 UTC; path=/;";
+  			// alert(userId);
+           });
+         }
+       });
+	
+	
+	
+	
+    });
+  
+	
+</script>
+
+
+
+</head>
+
+<body id="body" onload="grades()">
+	<!--<button onclick="grades();">GRADES</button>-->
+
+	<ul id="navbar" style="display: none;">
+	<li><button  id="grades" class="navbtn" onclick="home()"><p>Grades</p></li>
+	<li><button  id="sched" class="navbtn" onclick="sched();"><p>Schedule</p></li>
+	<li><button  id="stream"class="navbtn" onclick="stream();"><p>Stream</p></li>
+	<li><button  id="attd"class="navbtn" onclick="attendance();"><p>Attendance</p></li>
+		
+		
+	<!--Right side, so reverse order-->
+	<li id="right"><form id="logoff" method="post"><button style='font-family: "Arial";background-color: #23822b; color: white; /* Green */' onclick="logOff();" class="button" id='logoffBttn'><p>Log Off</p></button></form></li>
+	<li  id="right"><button class="button" onclick="GPA();"><p style="color: grey; font-family: 'Arial';" id="GPA"></p></button></li>
+	<li  id="right"><button class="button"><p style="color: grey; font-family: 'Arial';" id="Period"></p></button></li>
+	
+	
+</ul>
+		<img id='logo' src='logo.png' height='160px' width='160px'/>
+		<center><h1 id="header" style="display: none;">Aspen +</h1></center>
+	
+</div>
+	
+</body>
+
+
+<?php
+
+require "config.php";
+require "common.php";
+
+$connection = new PDO($dsn, $username, $password, $options);
+
+
+if(isset($_POST['submit'])) {//-------------LOGIN FORM (INITIAL FUNCTION!) CALLED ONLOAD------------------
+	$username = $_POST['username'];
+	$password = $_POST['password'];
+	/*
+	$username = "8004542";
+	$password = "SchoolsOut4Summer";
+*/
+
+
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/logon.do');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//stops it from displaying the HTML it gets back
+
+$page = curl_exec($ch);
+curl_close($ch);
+
+//echo "page";
+
+//echo $page;
+
+$sesIdPos = strpos($page, "sessionId");
+$TOKENPos = strpos($page, "TOKEN");
+$sess = substr($page, $sesIdPos +11 , 32);
+$tok =  substr($page, $TOKENPos + 14, 32);
+echo "
+	<script>
+document.cookie='tok=$tok';
+document.cookie='sess=$sess';
+
+</script>
+	
+	
+	";
+
+//try login
+
+//$ch = curl_init();
+
+
+
+
+
+$ch = curl_init();
+
+curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/logon.do');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//stops it from displaying the HTML it gets back
+curl_setopt($ch, CURLOPT_POSTFIELDS, "org.apache.struts.taglib.html.TOKEN=$tok&userEvent=930&userParam=&operationId=&deploymentId=x2sis&scrollX=0&scrollY=0&formFocusField=username&mobile=false&SSOLoginDone=&username=$username&password=$password");
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+$headers = array();
+$headers[] = 'Connection: keep-alive';
+$headers[] = 'Cache-Control: max-age=0';
+$headers[] = 'Origin: https://aspen.cpsd.us';
+$headers[] = 'Upgrade-Insecure-Requests: 1';
+$headers[] = 'Content-Type: application/x-www-form-urlencoded';
+$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36';
+$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+$headers[] = 'Referer: https://aspen.cpsd.us/aspen/logon.do';
+$headers[] = 'Accept-Encoding: gzip, deflate, br';
+$headers[] = 'Accept-Language: en-US,en;q=0.9';
+$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+$result = curl_exec($ch);
+if (strpos($result, 'Trouble') !== false) {
+	//echo $result
+	echo "<script>window.location.href='aspen.php'</script>";//if password is wrong, sends back to signin page again.
+}
+if (curl_errno($ch)) {
+    echo 'Error:' . curl_error($ch);
+}
+curl_close ($ch);
+
+
+// Generated by curl-to-PHP: http://incarnate.github.io/curl-to-php/
+$ch = curl_init();
+
+curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalClassList.do?navkey=academics.classes.list');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+$headers = array();
+$headers[] = 'Connection: keep-alive';
+$headers[] = 'Upgrade-Insecure-Requests: 1';
+$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36';
+$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+$headers[] = 'Referer: https://aspen.cpsd.us/aspen/home.do';
+$headers[] = 'Accept-Encoding: gzip, deflate, br';
+$headers[] = 'Accept-Language: en-US,en;q=0.9';
+$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+$result = curl_exec($ch);
+$start = strpos($result,"dataGrid") - 27;
+$table = substr($result, $start);
+
+echo '<div id="classes" style="overflow-x:auto;">' . $table . '</div>';
+//echo "<h1 id='calculatedGrade'></h1>";
+
+
+$before = substr($result,strpos($result,'window.name = "root_aspen_window";'),300);//gets part of overall string that contains session ID
+$before .= substr($result,strpos($result,'org.apache.struts'), 79); //gets part of string that contains token
+//The above is nessacary because if we send the whole "before" part, there are tags that are opened that cannot be closed, so we have to take parts of the string that are just text so we can echo that down and then hide it. This allow javascript to read it later to get the tokens, but it can be hidden with CSS so that the user has no idea.
+
+echo "<div style='background-color: red; display: none;'>" .  $before . "</div>";//places strings inside div tag that is hidden
+
+
+
+
+echo "<script> tok();  </script>";
+
+
+
+
+
+
+/*
+$sesIdPos = strpos($result, "sessionId");
+$TOKENPos = strpos($result, "TOKEN");
+$sess = substr($result, $sesIdPos +11 , 32);
+$tok =  substr($result, $TOKENPos + 14, 32);
+echo "
+	<script>
+document.cookie='tok=$tok';
+document.cookie='sess=$sess';
+
+</script>
+	
+	
+	";*/
+	
+	
+
+if (curl_errno($ch)) {
+    echo 'Error:' . curl_error($ch);
+}
+curl_close ($ch);
+
+
+
+
+//echo "page";
+
+//echo $page;
+
+}
+//-------------------END LOGIN------------------
+
+
+
+
+
+
+
+if(isset($_POST['send'])) {//--------------GETS ASSIGNMENTS (MAIN PHP)-----------------
+	$class = $_POST['send'];
+	$ch = curl_init();
+	//first step
+	
+	$ch = curl_init();
+
+	$tok = $_COOKIE['tok'];
+	$sess = $_COOKIE['sess'];
+	
+
+	global $connection;
+	if(isset($_COOKIE['notificationToken'])) {
+	$token = $_COOKIE['notificationToken'];
+	
+	$sql = "SELECT * 
+		FROM notifications WHERE sess='$sess'";
+
+	    $statement = $connection->prepare($sql);
+	    $statement->execute();
+
+	    $result = $statement->fetchAll();
+		
+		if ($result && $statement->rowCount() > 0) {//Checks to see if sess is already in DB. If it is, don't repeat!
+		}
+		else {
+		
+	$chat = array(
+	         "sess" => $sess,
+	         "token"  => "$token",
+			"lastAssignment" => ""//makes the creater of this new chat the super admin OF THIS CHAT
+
+	     );
+		//format sql command to add a user to the users table. Make user a level 3 admin (meaning they have super admin privalages on their chat)
+
+	     $sql = sprintf(
+	             "INSERT INTO %s (%s) values (%s)",
+	             "notifications", //defines auth table
+	             implode(", ", array_keys($chat)),
+	             ":" . implode(", :", array_keys($chat))
+	     );
+
+	     $statement = $connection->prepare($sql);
+	     $statement->execute($chat);
+	 }
+ 	}//end of isset
+	
+	/*
+	echo $tok;
+	echo "\n";
+	echo $sess;*/
+	/*
+	$tok = "9f08b2768d302b8dc0d3b5b8100bec11";
+	$sess = "C921A6C58E5B341CB3CC3D771C1174AC";
+*/	
+
+	 // Generated by curl-to-PHP: http://incarnate.github.io/curl-to-php/
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalClassList.do');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, "org.apache.struts.taglib.html.TOKEN=$tok&userEvent=2100&userParam=$class&operationId=&deploymentId=x2sis&scrollX=0&scrollY=0&formFocusField=&formContents=&formContentsDirty=&maximized=false&menuBarFindInputBox=&selectedStudentOid=STD000000A1Vkk&jumpToSearch=&initialSearch=&yearFilter=current&termFilter=current&allowMultipleSelection=true&scrollDirection=&fieldSetName=Default+Fields&fieldSetOid=fsnX2Cls&filterDefinitionId=%23%23%23all&basedOnFilterDefinitionId=&filterDefinitionName=filter.allRecords&sortDefinitionId=default&sortDefinitionName=Schedule+term&editColumn=&editEnabled=false&runningSelection=");
+	curl_setopt($ch, CURLOPT_POST, 1);
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Cache-Control: max-age=0';
+	$headers[] = 'Origin: https://aspen.cpsd.us';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'Content-Type: application/x-www-form-urlencoded';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalClassList.do?navkey=academics.classes.list';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+	
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalClassDetail.do?navkey=academics.classes.list.detail');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Cache-Control: max-age=0';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalClassList.do?navkey=academics.classes.list';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	echo substr($result, strpos($result, "Average Summary"));
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+	
+
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalAssignmentList.do?navkey=academics.classes.list.gcd');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalClassDetail.do?navkey=academics.classes.list.detail';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	$start = strpos($result,"dataGrid") - 27;
+	$table = substr($result, $start);
+		
+	echo $table;
+
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+	
+	
+	
+	//FOURTH (goes back, needed to reset for some reason):
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalClassList.do?navkey=academics.classes.list');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalAssignmentList.do?navkey=academics.classes.list.gcd';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: JSESSIONID='.$sess.'; deploymentId=x2sis; _ga=GA1.3.1403816719.1550021107; _gid=GA1.3.957485532.1550021107';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+//	echo "<script> catagories(); </script>";//gets weights of catagories and their titles for later calculations from details page
+	
+	die();
+
+}
+
+
+
+
+
+if(isset($_POST['quarter'])) {
+$quarter = $_POST['quarter'];
+//$quarter = "GTM0000000C1s8";
+$tok = $_COOKIE['tok'];
+$sess = $_COOKIE['sess'];
+//OLD CODE:----------------
+$ch = curl_init();
+
+curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalClassList.do');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, "org.apache.struts.taglib.html.TOKEN=$tok&userEvent=950&userParam=&operationId=&deploymentId=x2sis&scrollX=0&scrollY=0&formFocusField=termFilter&formContents=&formContentsDirty=&maximized=false&menuBarFindInputBox=&selectedStudentOid=STD000000A1Vkk&jumpToSearch=&initialSearch=&yearFilter=current&termFilter=$quarter&allowMultipleSelection=true&scrollDirection=&fieldSetName=Default+Fields&fieldSetOid=fsnX2Cls&filterDefinitionId=%23%23%23all&basedOnFilterDefinitionId=&filterDefinitionName=filter.allRecords&sortDefinitionId=default&sortDefinitionName=Schedule+term&editColumn=&editEnabled=false&runningSelection=");
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+$headers = array();
+$headers[] = 'Connection: keep-alive';
+$headers[] = 'Pragma: no-cache';
+$headers[] = 'Cache-Control: no-cache';
+$headers[] = 'Origin: https://aspen.cpsd.us';
+$headers[] = 'Upgrade-Insecure-Requests: 1';
+$headers[] = 'Content-Type: application/x-www-form-urlencoded';
+$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36';
+$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalClassList.do?navkey=academics.classes.list';
+$headers[] = 'Accept-Encoding: gzip, deflate, br';
+$headers[] = 'Accept-Language: en-US,en;q=0.9';
+$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.1403816719.1550021107; _ga=GA1.2.1303193171.1550031132; _gid=GA1.3.248073051.1552178615';
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+$result = curl_exec($ch);
+//echo $result;
+$start = strpos($result,"dataGrid") - 27;
+$table = substr($result, $start);
+
+echo '<div id="classes" style="overflow-x:auto;">' . $table . '</div>';
+//echo "<h1 id='calculatedGrade'></h1>";
+
+
+$before = substr($result,strpos($result,'window.name = "root_aspen_window";'),300);//gets part of overall string that contains session ID
+$before .= substr($result,strpos($result,'org.apache.struts'), 79); //gets part of string that contains token
+//The above is nessacary because if we send the whole "before" part, there are tags that are opened that cannot be closed, so we have to take parts of the string that are just text so we can echo that down and then hide it. This allow javascript to read it later to get the tokens, but it can be hidden with CSS so that the user has no idea.
+
+echo "<div style='background-color: red; display: none;'>" .  $before . "</div>";//places strings inside div tag that is hidden
+
+
+if (curl_errno($ch)) {
+    echo 'Error:' . curl_error($ch);
+}
+curl_close ($ch);
+
+	
+	die();
+
+
+
+
+
+}
+
+
+ // Generated by curl-to-PHP: http://incarnate.github.io/curl-to-php/
+ 
+// $yearFilter = ;
+
+
+
+//get assigments:-------
+
+//go to details page (first)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------SECONDARY FUNNCTIONS-----------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+if(isset($_POST['logoff'])) {//-----------------LOGS OFF---------------------
+	
+	// Generated by curl-to-PHP: http://incarnate.github.io/curl-to-php/
+	
+	$sess = $_COOKIE['sess'];
+	$sql = "DELETE FROM notifications where sess='$sess'";
+
+	    $statement = $connection->prepare($sql);
+	    $statement->execute();
+	    $result = $statement->fetchAll();
+	
+		
+		$ch = curl_init();
+
+		curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/logout.do');
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+		curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+		$headers = array();
+		$headers[] = 'Connection: keep-alive';
+		$headers[] = 'Pragma: no-cache';
+		$headers[] = 'Cache-Control: no-cache';
+		$headers[] = 'Upgrade-Insecure-Requests: 1';
+		$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36';
+		$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+		$headers[] = 'Referer: https://aspen.cpsd.us/aspen/home.do';
+		$headers[] = 'Accept-Encoding: gzip, deflate, br';
+		$headers[] = 'Accept-Language: en-US,en;q=0.9';
+		$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+		$result = curl_exec($ch);
+		if (curl_errno($ch)) {
+		    echo 'Error:' . curl_error($ch);
+		}
+		curl_close ($ch);
+	
+	
+
+}
+
+
+//GET SCHEUDLE
+
+if(isset($_POST['schedule'])) {//------------GETS SCHEUDLE------------------------
+	//LOAD "MY INFO PAGE"
+	//----------
+	//$sess = "2E57B5ADD40EECF433E1472E6BD28CB7";
+	//echo "<script> tok(); </script>";
+	$sess = $_COOKIE['sess'];
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalStudentDetail.do?navkey=myInfo.details.detail');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Pragma: no-cache';
+	$headers[] = 'Cache-Control: no-cache';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalClassList.do?navkey=academics.classes.list';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.1403816719.1550021107; _ga=GA1.2.1303193171.1550031132; _gid=GA1.3.1484895692.1550983664';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	//echo $result;
+	//echo $sess;
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/studentScheduleContextList.do?navkey=myInfo.sch.list');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Pragma: no-cache';
+	$headers[] = 'Cache-Control: no-cache';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalStudentDetail.do?navkey=myInfo.details.detail';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.1403816719.1550021107; _ga=GA1.2.1303193171.1550031132; _gid=GA1.3.1484895692.1550983664';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	//echo $result;
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/studentScheduleMatrix.do?navkey=myInfo.sch.matrix&termOid=&schoolOid=null&k8Mode=null&viewDate=2/24/2019&userEvent=0');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Pragma: no-cache';
+	$headers[] = 'Cache-Control: no-cache';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalStudentDetail.do?navkey=myInfo.details.detail';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.1403816719.1550021107; _ga=GA1.2.1303193171.1550031132; _gid=GA1.3.1484895692.1550983664';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	$result = substr($result,strpos($result,"List view"));
+	echo $result;
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+
+
+
+
+}
+
+if(isset($_POST['attendance'])) {//-------------GETS ATTENDANCE---------------
+	
+	$sess = $_COOKIE['sess'];
+	
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/home.do');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Pragma: no-cache';
+	$headers[] = 'Cache-Control: no-cache';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalClassList.do?navkey=academics.classes.list';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	//echo $result;
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+	
+	
+	
+	
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/studentRecentActivityWidget.do?preferences=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%3Cpreference-set%3E%0A++%3Cpref+id%3D%22dateRange%22+type%3D%22int%22%3E4%3C%2Fpref%3E%0A%3C%2Fpreference-set%3E&rand=1551060749142');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Pragma: no-cache';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36';
+	$headers[] = 'Accept: application/xml, text/xml, */*; q=0.01';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/home.do';
+	$headers[] = 'X-Requested-With: XMLHttpRequest';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Cache-Control: no-cache';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+	$result = curl_exec($ch);
+	echo $result;
+	$xml = simplexml_load_string($result);
+	//print_r($xml->{'recent-activity'}->periodAttendance);
+	if ($xml === false) {
+	    echo "Failed loading XML: ";
+	    foreach(libxml_get_errors() as $error) {
+	        echo "<br>", $error->message;
+	    }
+	} else {
+	
+		$arrayOfGrades = array();
+		$table = "<table id='stream'><tr><th>Attendance:</th></tr>";
+		foreach($xml->{'recent-activity'}->periodAttendance as $grades) {
+			//print_r($grades);
+			$class = $grades['classname'];
+			$period =  $grades['period'];
+			$name = $grades['assignmentname'];
+		 	$date = $grades['date'];
+			$absent = $grades['absent'];
+			$excused = $grades['excused'];
+			$tardy = $grades['tardy'];
+			$dismissed = $grades['dismissed'];
+			
+			if(strcmp($absent,"true") == 0) {
+				$type = 'absent';
+			}
+			if(strcmp($excused,"true") == 0) {
+				$type = 'excused absent';
+				
+			}
+			if(strcmp($tardy,"true") == 0) {
+				$type = 'tardy';
+				
+			}
+			if(strcmp($dismissed,"true") == 0) {
+				$type = 'dismissed';
+				
+			}
+			
+			$string = $date . ": You were marked <b>".$type."</b> for " . $class . " during period <b>" . $period."</b>";
+			$table .= "<tr><td>" . $string . "</tr></td>";
+			//echo $string . "<br></br>";
+			//array_push($arrayOfGrades,$string);
+		}
+		$table .= "</table>";
+		echo $table;
+		//echo $last;
+		
+	
+	}	
+if (curl_errno($ch)) {
+    echo 'Error:' . curl_error($ch);
+}
+curl_close ($ch);
+
+	
+die();
+
+
+
+
+}
+
+if(isset($_POST['stream'])) {//-------------------GETS STREAM--------------------
+	$sess = $_COOKIE['sess'];
+	
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalAssignmentList.do?navkey=academics.classes.list.gcd');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalClassDetail.do?navkey=academics.classes.list.detail';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	$start = strpos($result,"dataGrid") - 27;
+	$table = substr($result, $start);
+		
+	//echo $table;
+
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+	
+	
+	
+	
+	
+	
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/home.do');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Pragma: no-cache';
+	$headers[] = 'Cache-Control: no-cache';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/portalClassList.do?navkey=academics.classes.list';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.144468742.1550005470; _gid=GA1.3.624495139.1550005470';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	//echo $result;
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+
+
+	$ch = curl_init();
+
+
+	//asdsadsadsad
+
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/studentRecentActivityWidget.do?preferences=%3C%3Fxml+version%3D%221.0%22+encoding%3D%22UTF-8%22%3F%3E%3Cpreference-set%3E%0A++%3Cpref+id%3D%22dateRange%22+type%3D%22int%22%3E4%3C%2Fpref%3E%0A%3C%2Fpreference-set%3E&rand=1550678163946');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Pragma: no-cache';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36';
+	$headers[] = 'Accept: application/xml, text/xml, */*; q=0.01';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/home.do';
+	$headers[] = 'X-Requested-With: XMLHttpRequest';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.1403816719.1550021107; _ga=GA1.2.1303193171.1550031132; _gid=GA1.3.1635508528.1550677506';
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Cache-Control: no-cache';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	//echo $result;
+	$xml = simplexml_load_string($result);
+//	print_r($xml->{'recent-activity'}->gradebookScore[2]);
+	if ($xml === false) {
+	    echo "Failed loading XML: ";
+	    foreach(libxml_get_errors() as $error) {
+	        echo "<br>", $error->message;
+	    }
+	} else {
+	
+		$arrayOfGrades = array();
+		$table = "<table id='stream'><tr><th>Assignments:</th></tr>";
+		
+		$n = 0;
+		foreach($xml->{'recent-activity'}->gradebookScore as $grades) {
+			//print_r($grades);
+			
+			if($n > 20) {
+				
+				break;
+			}
+			$grade = $grades['grade']; //<-- THIS DOESNT WORK!!!!!!!!!
+			$class = $grades['classname'];
+			$name = $grades['assignmentname'];
+		 	$date = $grades['date'];
+			$classID = $grades['sscoid'];
+			
+			$oid = $grades['oid'];
+		//	echo "EHJKAHKJHKJADSHJK";
+			//$oid = "GSC000000G5vvC";
+			
+			//$denom = detail($oid);
+			if (curl_errno($ch)) {
+			    echo 'Error:' . curl_error($ch);
+			}
+			curl_close ($ch);
+
+			
+			
+			
+			
+			
+			
+			
+			
+			//END DENOM
+			
+			//$string = "<p onclick=\"selectClass('$classID');\">" . $date . ": You received a <b>" . $grade . "stuff:" . $oid. "end".  "</b> on " . $name . " in " . $class . "</p>";
+			$string = "<p onclick=\"selectClass('$classID');\">" . $date . ": You received a <b>" . $grade . "</b> on " . $name . " in " . $class . "</p>";
+			
+			$table .= "<tr><td>" . $string . "</tr></td>";
+			//echo $string . "<br></br>";
+			//array_push($arrayOfGrades,$string);
+		$n ++;
+		
+		}
+		$table .= "</table>";
+		echo $table;
+		//echo $last;
+		
+	
+	}	
+if (curl_errno($ch)) {
+    echo 'Error:' . curl_error($ch);
+}
+curl_close ($ch);
+
+	
+die();
+	//print_r($xml);
+
+	
+	}
+
+
+
+
+
+if(isset($_POST['assigDetail'])) {//---------------GETS STATS (DENOMINATOR)----------------
+		
+		$oid = $_POST['assigDetail'];
+	
+		echo detail($oid,0);
+	}
+	if(isset($_POST['denominator'])) {
+		
+			$oid = $_POST['denominator'];
+	
+			echo detail($oid,1);
+		}
+function detail ($oid,$resp) {
+
+	$sess = $_COOKIE['sess'];
+			//$sess = "223EDD1824DA60235ED25A072B890614";
+		//$oid = "GCD000000FmaTI";
+		$oid = "GSC000000G91oI";  //REMOVE IN BUIOLD
+
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, 'https://aspen.cpsd.us/aspen/portalAssignmentDetail.do?navkey=academics.classes.list.gcd.detail&oid='.$oid.'');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip, deflate');
+
+	$headers = array();
+	$headers[] = 'Connection: keep-alive';
+	$headers[] = 'Pragma: no-cache';
+	$headers[] = 'Cache-Control: no-cache';
+	$headers[] = 'Upgrade-Insecure-Requests: 1';
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36';
+	$headers[] = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8';
+	$headers[] = 'Referer: https://aspen.cpsd.us/aspen/home.do';
+	$headers[] = 'Accept-Encoding: gzip, deflate, br';
+	$headers[] = 'Accept-Language: en-US,en;q=0.9';
+	$headers[] = 'Cookie: deploymentId=x2sis; JSESSIONID='.$sess.'; _ga=GA1.3.1403816719.1550021107; _ga=GA1.2.1303193171.1550031132; _gid=GA1.3.1635508528.1550677506';
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$result = curl_exec($ch);
+	if($resp == 0) {//return stats REMOVE THIS IF STATMENT IN BUILD
+	echo $result; }
+	$result = substr($result, strpos($result, "Score"));
+
+	$result = substr($result, strpos($result, "%"),strpos($result, "</table>"));
+	
+	if($resp == 1) {//return denominator for stream
+	echo $result;
+	}
+	$result = substr($result, 0,strpos($result, "("));
+	$result = explode("</",$result);
+	$result= explode ("/",$result[3]);
+	//echo $result[1];
+	if (curl_errno($ch)) {
+	    echo 'Error:' . curl_error($ch);
+	}
+	curl_close ($ch);
+	if($resp == 1) {//return denominator for stream
+	echo $result[1] . $oid;
+	}
+
+}
+?>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	
+	<div id="options" style="display: none;">
+		<center>
+<button  class="button" onclick='reset();'>Reset Changes</button>
+	<button  class="button" onclick='add();'>Add Assignment</button>
+	<button  class="button" onclick='pre();'>Predict</button>
+	<button  class="button" onclick='testCorrections();'>Test Corrections</button>
+	
+</center>
+</div>
+	<p id="newthing"></p> <!-- Should not be dislpayed by default so stuff from "initQuarters" function isn't visible!-->
+<!--<button onclick="editable();">Edit Grades</button>-->
+
+<script>
+	
+	
+//----------------GLOBAL VARS-----------------------------	
+	var weights = [];
+	var titles = [];
+	
+	var classID;
+	
+	var classes = [];
+	var savedStates = [];
+	var corrections = false;//determines if the corrections functin shuld be called when user clicks on a row (only enabled when user clicks "Test Corrections" button)
+	var predictions = false;//determines if the predictions functin shuld be called when user clicks on a row (only enabled when user clicks "Test Corrections" button)
+
+var gpaTypes = ["per","unweighted","weighted"];
+var type = 0;
+
+
+
+
+
+setTimeout(function(){sched(); home();}, 1000);//calls fucntion that gets class and time remaining
+
+
+//------------------------------------INITIAL FUNCTIONS!---------------------
+function grades() {
+				
+		initQuarters(); //<-- used later for more than one quarter (need to add years too) (For some reason, this function solves all problems... so WTF; Just solved issue where rest would make some of the categgories not show up automatically in select. And issue where when you clicked on one class, it would always show another...)
+		
+		home();
+		
+		var tables = document.getElementsByTagName("table");
+		var table = tables[0];
+	// 	document.getElementById('classes').innerHTML = '<select onchange="quarter(this.selectedIndex + 1);><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select>' + document.getElementById('classes').innerHTML;
+	//	quarter(1);
+	//ABOVE FOR LATER MULTIPLE QUARTER IMPLEMENTATION!!!
+	
+		GPA();//get GPA
+		
+//ADD INVITE LINKS TO MESSAGEBOARD
+	for(var i = 1; i < table.rows.length; i ++) {
+		var teacher = table.rows[i].cells[5].innerHTML.trim();
+		var className = table.rows[i].cells[1].innerHTML.trim();
+		className = className.substring(className.indexOf(')">') + 3,className.indexOf('</a>'));
+		teacher = teacher.split(",")[0];
+		if(!table.rows[i].cells[1].innerHTML.includes("button")){//for some reason this function gets called multiple times...
+		table.rows[i].cells[1].innerHTML += "<button class='inviteLink' onclick='window.location=\"https://messageboard.cc/messageboard/public/open.php?chat="+className+ ": " + teacher+"\"'>Discuss with friends</button>";
+	}
+		
+	}
+		
+	
+	
+document.getElementById('signin').style.display = 'none';//hide signin field if not already
+document.getElementById('newthing').style.display = 'block';//hide signin field if not already
+document.getElementById('header').style.display = 'block';//hide signin field if not already
+document.getElementById('logo').style.display = 'block';//hide signin field if not already
+
+document.getElementById('navbar').style.display = 'block';//show navbar now that user has signed in!
+//document.body.style.backgroundImage = "url('https://webgradients.com/public/webgradients_png/013%20Heavy%20Rain.png')";
+document.body.style.backgroundImage = "none";
+document.body.style.backgroundColor = "#f7faff";
+
+
+	var tables = document.getElementsByTagName("table");
+	
+	var table = tables[0];
+	show_hide_column(0,false,0);
+	show_hide_column(2,false,0);
+	show_hide_column(3,false,0);
+	show_hide_column(4,false,0);
+	show_hide_column(5,false,0);
+	//show_hide_column(6,false,0);
+	show_hide_column(9,false,0);
+	show_hide_column(10,false,0);
+	 
+	table.deleteRow(0);
+
+	var row = table.insertRow(0);
+
+	// Insert new cells (<td> elements) at the 1st and 2nd position of the "new" <tr> element:
+	var cell1 = row.insertCell(0);
+	var cell2 = row.insertCell(1);
+	var cell3 = row.insertCell(2);
+	var cell4 = row.insertCell(3);
+
+
+	// Add some text to the new cells:
+	
+		// !!! CURRENTLY SETTING DEFUALT QUARTER MANUALLY!!?! (NEED TO FIX)
+	
+	cell1.innerHTML = "Class <select onchange='quarter(value);'><option value='1'>Q1</option><option value='2'>Q2</option><option value='3'>Q3</option><option value='4'  selected='selected'>Q4</option>";
+	cell2.innerHTML = "Calculated Grade";
+	cell3.innerHTML = "Grade";
+	cell4.innerHTML = "Absences"; 
+	 
+	for(var i = 1; i < table.rows.length; i ++) {
+		table.rows[i].cells[6].innerHTML = table.rows[i].cells[7].innerHTML;
+	
+	}	
+
+}
+
+function initQuarters() {//called to allow the GPA calculator to get quarters... idk why this is nessaccery, just is!
+	var tables = document.getElementsByTagName("table");
+	
+	tok();//gets new token (and session ID) so that can query next step properly! Puts them into cookies which PHP can see
+	
+  	var id="addsaads";
+    
+   
+    classID = id;
+
+	if(classes.includes(classID)) {
+		
+		document.getElementById("newthing").innerHTML = "<table></table><table></table><table></table>" + savedStates[classes.indexOf(classID)];//adds other table tags so that the number will still be 4 (consistent) event though when recalling from save it doesnt need other tables
+		drop();
+		
+	}
+		
+	else {
+		
+		getAssigments(classID);
+		console.log(classID);
+		
+	}
+}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+//--------------SELECT CLASS---------------------------------------	
+	
+$('.navbtn').click(function (event) {//-----------CHANGES NAVBAR COLOR WHEN ITEM IS SELECTED-----------
+	$('.navbtn').css("background-color","#f3f3f3");
+	$('.navbtn').css("color","grey");
+	
+	
+$(this).css("background-color","#9b9b9b");
+$(this).css("color","white");
+
+});
+
+	
+	
+	
+	
+	
+	
+$('.pointer').click(function (event) {//--------------CALLS THE GET ASSIGNMENTS FUNCTION WHEN CLASS IS SELECTED--------------
+
+	var tables = document.getElementsByTagName("table");
+	if(tables.length > 2) {
+	saveChanges(); //if there is a table already open, save the changes... then get the new graph!
+}
+	// Don't follow the link
+	event.preventDefault();
+	
+	$('.navbtn').css("background-color","#f3f3f3");
+	$('.navbtn').css("color","grey");//Since none of the header bar options are selected, de-select them all!
+
+	document.getElementById("classes").style.display = "none";//hides classes tab
+	document.getElementById("options").style.display = "block";//shows buttons like "reset changes" and "add assignment"
+	document.getElementById("newthing").style.display = "block";//shows tab for assignments
+	tok();//gets new token (and session ID) so that can query next step properly! Puts them into cookies which PHP can see
+	
+	// Log the clicked element in the console
+//	console.log(event.target);
+	//alert(this.id);
+	var id = this.id;
+   
+   
+    tr = tables[0].getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+		var row = tr[i];
+		if(row.innerHTML.includes(id)) {
+			
+			row.style.backgroundColor = "#B1D5FC";
+		}
+		else {//if its not the higlighted row, go back to checkered patter
+			if(i % 2 == 0){//if even row, make white
+				row.style.backgroundColor = "white";
+				
+			}
+			else {// else (if odd # row) make grey!
+				row.style.backgroundColor = "#f5f5f5";
+				
+				
+			}
+			
+		}
+        }
+             
+   
+   
+   
+    classID = id;
+	
+	//RECOVERS FROM SAVE <-- FIX LATER!
+	/*alert(classID);
+	var save = JSON.parse(localStorage.getItem(classID));
+ 
+if(save.length > 0) {
+	 alert("recovering from save!!");
+	document.getElementById("newthing").innerHTML = "<table></table><table></table><table></table>" + save;
+
+}
+else*/ if(classes.includes(classID)) {
+		
+		document.getElementById("newthing").innerHTML = "<table></table><table></table><table></table>" + savedStates[classes.indexOf(classID)];//adds other table tags so that the number will still be 4 (consistent) event though when recalling from save it doesnt need other tables
+		drop();
+		
+	}
+	 
+		
+	
+		
+	else {
+		
+		getAssigments(classID);
+		console.log(classID);
+		
+	}
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function getAssigments(id) {
+	
+	document.getElementById("newthing").innerHTML = "<center><p id='loading'>Loading ...</p></center>";//loading indicator
+	
+	
+	
+	
+  var getText = new XMLHttpRequest();
+
+  getText.open('POST', 'aspen.php');
+  getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+  getText.onload = function() {
+  	if (getText.status === 200)
+		var returnVal = getText.responseText;
+
+	document.getElementById("newthing").innerHTML = returnVal.substring(returnVal.indexOf('src="images/spacer.gif" height="5" width="1">') +  45,returnVal.length);//gets return value but removes crap like "Avg Summary" header and the navbar 	
+		var tables = document.getElementsByTagName("table");
+	
+		tables[1].style.display = "none";//hide DETAILS TABLE (may want to show this later)
+		tables[2].style.display = "none";//HIDES RANDOM JUNK TABLE
+		tables[3].style.display = "none";//HIDES RANDOM JUNK TABLE
+		
+		
+		var table = tables[4];
+		
+		show_hide_column(0,false,4);
+	
+		show_hide_column(3,false,4);
+		show_hide_column(4,false,4);
+		//show_hide_column(6,false,4);
+		table.deleteRow(0);
+
+		var row = table.insertRow(0);
+
+		// Insert new cells (<td> elements) at the 1st and 2nd position of the "new" <tr> element:
+		var cell1 = row.insertCell(0);
+		var cell2 = row.insertCell(1);
+		var cell3 = row.insertCell(2);
+		var cell4 = row.insertCell(3);
+		var cell5 = row.insertCell(4);//adds column so the header is green over the remove buttons
+
+		// Add some text to the new cells:
+		cell1.innerHTML = "Assignment Name";
+		cell2.innerHTML = "Category";
+		cell3.innerHTML = "Score";
+		cell4.innerHTML = "Percentage";
+		for(var i = 1; i < table.rows.length; i ++) {//put numerator and demoninator back together and put in "/". Final result will remove the (3) <-- score, so that the user will just see the raw fraction.
+		
+		var row = table.rows[i];
+		var score = row.cells[5].innerHTML;
+		
+		if(!score.includes("Ungraded")) {
+		
+		
+		var part1 = score.substr(score.indexOf("</span></div></td><td>") + 22,score.length);
+		var frac = part1.substr(0,part1.indexOf("</td><td>(")).split("/");//gets the 20.0/20.0 franction
+		var numerator = frac[0];
+		var demoninator = frac[1];
+		row.cells[5].innerHTML = frac[0] + "/" + frac[1];
+		row.cells[6].innerHTML = parseFloat(frac[0])/parseFloat(frac[1]).toFixed(2)*100 + "%";//update percentage by calculating with new fraction
+	
+	
+	
+	}
+	else {
+		row.cells[5].innerHTML = "Ungraded";
+		
+	}
+	var removeBttn = row.insertCell(7);//add remove button
+	removeBttn.innerHTML = "<button class='removeBttn' onclick='removeAssignment("+i+");'>X</button>";
+	
+/*	var tables = document.getElementsByTagName("table");  
+ var table = tables[4]; */
+ 
+ var string = table.rows[i].cells[1].outerHTML; 
+ string = string.substring(string.indexOf("portalAssignmentListForm") + 29,string.length); string = string.substring(0,string.indexOf("');"));	
+ table.rows[i].cells[1].innerHTML += "<button class='removeBttn' onclick='saveChanges();assig(\""+string+"\",0);'>i</button>";//set to zero so it gets denominator
+// alert(string);
+}
+catagories();
+drop();	
+		
+		calculateGrade();
+		document.getElementsByTagName("table")[4].addEventListener("click", editable);
+		
+			
+}		
+	getText.send(encodeURI('send=' + id));//asks for text to be sent down
+		return false;
+
+
+	
+}
+
+
+
+
+function editable() {
+	var tables = document.getElementsByTagName("table");
+	
+	var table = tables[4];
+	table.contentEditable = "true";
+
+	
+	
+}
+
+
+$('body').on('focus', '[contenteditable]', function() {
+    const $this = $(this);
+    $this.data('before', $this.html());
+}).on('blur keyup paste input', '[contenteditable]', function() {
+    const $this = $(this);
+    if ($this.data('before') !== $this.html()) {
+       /* $this.data('before', $this.html());
+        $this.trigger('change');*/
+	   calculateGrade();
+	   
+	}
+});
+
+
+var counter = 1;
+var oids = [];
+function getOid () {
+	var tables = document.getElementsByTagName("table");
+	var table = tables[1];
+	
+	
+	for(var i = 1; i  < table.rows.length - 1; i ++ ) {
+		var str = table.rows[i].cells[0].innerHTML;
+	
+		str = str.substring(str.indexOf("stuff:") + 6,str.indexOf("end"));
+		
+		oids.push(str);
+		
+	}
+	
+}
+function denom() {
+	var tables = document.getElementsByTagName("table");
+	var table = tables[1];
+	
+	//table.rows[counter].cells[0].innerHTML += val;
+	
+	if(counter < table.rows.length - 1) {
+	/*var str = table.rows[counter].cells[0].innerHTML;
+	
+	str = str.substring(str.indexOf("stuff:") + 6,str.indexOf("end"));*/
+	
+	str = oids[counter];
+	console.log(str);
+	
+	
+	//alert(str);
+	//assig(str,1);//DOESN'T WORK BECAUSE OF AJAX NOT FINISHING BEFORE THE NEXT PART OF THE LOOP STARTS!!!!!!!!!!!
+	//assig(str,1);
+	getAssig(str,1);
+}
+
+	//alert(DDD);
+}
+
+
+function getDenom(oid,row) {
+	
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+	//	alert(oid + returnVal);
+		var tables = document.getElementsByTagName("table");
+		var table = tables[1];
+		table.rows[row].cells[0].innerHTML += returnVal;
+		//returnVal = "<center><h1>Recent Assignments:</h1></center>" + returnVal.substring(returnVal.indexOf("listGridFixed") + 16,returnVal.indexOf('options')); 
+	}
+		getText.send(encodeURI('assigDetail=' + oid));//asks for text to be sent down
+		return false;
+}
+
+
+
+function tok () {
+	
+	
+	var str = document.getElementById("body").innerHTML;
+	
+	var sess = str.substring(str.indexOf("sessionId = '") + 13, str.indexOf("sessionId = '") + 45);
+	var tok = str.substring(str.indexOf("taglib.html.TOKEN") + 26, str.indexOf("taglib.html.TOKEN") + 58);
+	
+
+	
+	document.cookie='tok=' + tok;
+	document.cookie='sess=' + sess;
+//	document.getElementById("crap").outerHTML = "";
+	
+	//alert(tok + "\n" + sess);
+	
+/*	str = str.substring(str.indexOf("Clear selected"), str.length);
+document.getElementById("body").innerHTML = str;		
+	*/
+	
+	
+	
+}
+
+function selectClass (id) {
+
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+//START OF IF AJAX IS DONE (THIS IS NESSECARY BECAUSE THE SESSION TOKEN NEEDS TO COMPLETE THE INIT FUNCTION AND THEN RUN THE NEXT PART, BUT IT CAN'T DO THE NEXT PART UNTILL THIS COMPLETES.. HENCE AJAX!)
+
+
+
+
+	var tables = document.getElementsByTagName('table');
+	$('.navbtn').css("background-color","#f3f3f3");
+	$('.navbtn').css("color","grey");//Since none of the header bar options are selected, de-select them all!
+
+	document.getElementById("classes").style.display = "none";//hides classes tab
+	document.getElementById("options").style.display = "block";//shows buttons like "reset changes" and "add assignment"
+	document.getElementById("newthing").style.display = "block";//shows tab for assignments
+	tok();//gets new token (and session ID) so that can query next step properly! Puts them into cookies which PHP can see
+	
+	// Log the clicked element in the console
+//	console.log(event.target);
+	//alert(this.id);
+	//var id = this.id;
+   
+   
+    tr = tables[0].getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+		var row = tr[i];
+		if(row.innerHTML.includes(id)) {
+			
+			row.style.backgroundColor = "#B1D5FC";
+		}
+		else {//if its not the higlighted row, go back to checkered patter
+			if(i % 2 == 0){//if even row, make white
+				row.style.backgroundColor = "white";
+				
+			}
+			else {// else (if odd # row) make grey!
+				row.style.backgroundColor = "#f5f5f5";
+				
+				
+			}
+			
+		}
+        }
+             
+   
+   
+   
+    classID = id;
+
+	if(classes.includes(classID)) {
+		
+		document.getElementById("newthing").innerHTML = "<table></table><table></table><table></table>" + savedStates[classes.indexOf(classID)];//adds other table tags so that the number will still be 4 (consistent) event though when recalling from save it doesnt need other tables
+		drop();
+		
+	}
+		
+	else {
+		
+		getAssigments(classID);
+		console.log(classID);
+		
+	}
+	
+	
+	
+}//end of if response		
+	getText.send(encodeURI('send=' + id));//asks for text to be sent down
+		return false;
+
+
+		
+	
+	
+	
+	
+}
+
+
+function catagories() {
+	var tables = document.getElementsByTagName("table");
+	
+	var table = tables[1];
+	
+	titles.push(classID);
+	weights.push(classID);
+	
+	
+	for(var i = 1; i < table.rows.length - 1; i += 2) {
+		
+		var row = table.rows[i];
+		var title = row.cells[0].innerHTML;
+		var weight = row.cells[3].innerHTML;
+		console.log(title);
+		titles.push(title);
+		
+		console.log(weight);
+		weights.push(weight);
+//	console.log("helpme");
+		
+	}
+	titles.push("END");
+	weights.push("END");
+	//console.log(titles);
+	
+	//console.log(weights);
+}
+
+
+function selected(row) {//select statment was changed, need to update paragraph near by so the value can be saved!
+	
+	var tables = document.getElementsByTagName("table");
+	var table = tables[4];
+	
+	
+	var original= table.rows[row].cells[2].getElementsByTagName('p')[0].innerHTML = titles[table.rows[row].cells[2].getElementsByTagName('select')[0].selectedIndex  + 1];//PLus 1 becasue we had off by 1 errors. IDK WHY!?!?
+	
+	
+	calculateGrade();//recalculate now that category is changed!
+}
+
+function drop() {//adds dropdown menu to assignments!
+	var tables = document.getElementsByTagName("table");
+	var table = tables[4];
+	var list = titles.slice(titles.indexOf(classID)+ 1,titles.length);
+	var list = list.slice(0,list.indexOf("END"));
+	console.log(list);
+	for(var i = 1; i < table.rows.length; i ++) {
+		var string = "";
+		var orig= table.rows[i].cells[2].innerHTML.trim();
+		
+		if(!orig.includes('select')) {//if its not already a select, then make it one!
+			
+			console.log(list.length);
+		for(var j = 0; j < list.length - 1; j ++) {
+			var weight = weights[titles.indexOf(list[j])];
+			string += '<option>' + list[j] + " (" + weight + ')</option>';
+		}
+
+
+		table.rows[i].cells[2].innerHTML = '<p style="display: none;" id="orig">'+orig+'</p><select onchange="selected('+i+')">'+string+'</select>';
+		
+		
+		table.rows[i].cells[2].getElementsByTagName('select')[0].selectedIndex = list.indexOf(orig);
+		}
+		if(orig.includes('youPick')) {//add assignment so pick first from list!
+			table.rows[i].cells[2].getElementsByTagName('select')[0].selectedIndex = 0;
+			
+		}
+		else {//already has select setup, but has forgotten state, so lets reset it!
+			var original= table.rows[i].cells[2].getElementsByTagName('p')[0].innerHTML;
+			table.rows[i].cells[2].getElementsByTagName('select')[0].selectedIndex = list.indexOf(original);
+			
+			
+		}
+	}
+}
+
+function calculateGrade() {
+	catagories();
+	var tables = document.getElementsByTagName("table");
+	var finalNum = 0;
+	var finalDemon = 0;
+	var finalFrac = []; // <-- that is what will be send along to the "predict" feature so it can get the final num and demon of the current grade to preict the next grade!
+	var table = tables[4];//gets assigment list table
+	var grades = [];
+	for(var k = 0; k < weights.length; k ++) {
+		grades.push("0/0");
+		
+	}
+
+	for(var i = 1; i < table.rows.length; i ++) {
+		
+		var row = table.rows[i];
+		/*var cata = row.cells[2].innerHTML.trim();*/
+		var cata = row.cells[2].getElementsByTagName('select')[0].selectedOptions[0].value;//get selected option on select button
+		cata = cata.substring(0,cata.indexOf("(") - 1);
+		var score = row.cells[5].innerHTML;
+	//	console.log(cata);
+		var weight = weights[titles.indexOf(cata)];
+		weight = parseFloat(weight.substring(0,weight.length - 1))/100; //remvove the percent sign and convert to decimal
+		//console.log(weight);
+		if(!score.includes("Ungraded")) {
+			
+			
+		var frac = score.split("/");
+		var numerator = frac[0];
+		var demoninator = frac[1];
+		//console.log(numerator);
+		//console.log(demoninator);
+		/*finalNum += numerator * weight;
+		finalDemon += demoninator  * weight;*/
+		
+		var arrayFrac = grades[titles.indexOf(cata)];
+		var oldFrac = arrayFrac.split("/");
+		var newNum = parseFloat(numerator) + parseFloat(oldFrac[0]);
+		var newDenom = parseFloat(demoninator) + parseFloat(oldFrac[1]);
+		grades[titles.indexOf(cata)] = newNum + "/" + newDenom;
+		
+				
+		row.cells[6].innerHTML = parseFloat(frac[0]/frac[1]).toFixed(2)*100 + "%";//update percentage by calculating with new fraction
+			
+		}
+	}
+	console.log(grades);
+	
+	//Find row in original table that contains this class:
+	
+	for(var j = 0; j < weights.length; j ++) {
+			
+			var fraction = grades[j].split("/");
+			
+			if(fraction[1] !== "0") {//if assigmnet has a grade
+				console.log(fraction[0]+ " /  " + fraction[1]);
+				
+				weight = weights[j];
+				weight = parseFloat(weight.substring(0,weight.length - 1))/100; //remvove the percent sign and convert to decimal
+			
+				var grade = parseFloat(fraction[0]) / parseFloat(fraction[1]);
+				console.log(grade+ "   " + weight);
+				
+			finalNum +=	grade*weight;
+			
+			finalDemon += weight;
+		}
+			
+	
+		
+		
+	}
+	
+	var finalGrade = (finalNum / finalDemon) * 100;
+	
+	
+	finalFrac[0] = finalNum;
+	finalFrac[1] = finalDemon;
+	
+	
+	var table = tables[0];
+	for(var j = 1; j < table.rows.length; j ++) {
+		var row = table.rows[j];
+		if(row.innerHTML.includes(classID)) {
+			finalGrade = finalGrade.toFixed(2);
+			var letter = getLetterGrade(finalGrade);
+			row.cells[6].innerHTML =  finalGrade + " " + letter;
+			
+		}
+	
+	
+	}
+	
+	clickCell();//adds click handelers so that user can select speciic rows (assigmnents) to apply test corrections to
+	return grades;
+	
+//	document.getElementById("calculatedGrade").innerHTML =  "Calculated Grade: " + finalGrade;
+	
+	
+}
+
+
+function home() {
+	document.getElementById('options').style.display = "none";
+	document.getElementById('classes').style.display = "block";
+	document.getElementById('newthing').style.display = "none";
+	var tables = document.getElementsByTagName("table");
+	
+    tr = tables[0].getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {//deselect class...
+		var row = tr[i];
+		
+			if(i % 2 == 0){//if even row, make white
+				row.style.backgroundColor = "white";
+				
+			}
+			else {// else (if odd # row) make grey!
+				row.style.backgroundColor = "#f5f5f5";
+				
+				
+			}
+			
+		
+        }
+	
+}
+
+	
+
+
+function saveChanges() {
+	var tables = document.getElementsByTagName("table");
+	table = tables[4];
+	if(classes.includes(classID)) {//if the array already has an entry for this class, just update it
+		savedStates[classes.indexOf(classID)] = table.outerHTML;
+		
+		// = table.outerHTML;
+	}
+	else {//otherwise, create a new one!
+		classes.push(classID);
+		savedStates.push(table.outerHTML);
+		
+	}
+
+
+	//localStorage.setItem(classID, JSON.stringify(table.outerHTML));//SAVES STATE <-- FIX LATER
+
+
+//	document.cookie = "save="+save;*/ //later make it save sessions and then prompt user if they want to restore next time they log in
+}
+
+
+function show_hide_column(col_no, do_show,tableNum) {
+	
+	var tables = document.getElementsByTagName("table");
+	var tbl = tables[tableNum];
+   // var tbl = document.getElementById('id_of_table');
+	
+	
+    var rows = tbl.getElementsByTagName('tr');
+
+    for (var row = 1; row < rows.length; row++) {//so it doesn't affect the title row!
+        var cols = rows[row].children;
+        if (col_no >= 0 && col_no < cols.length) {
+            var cell = cols[col_no];
+            if (cell.tagName == 'TD') cell.style.display = do_show ? 'block' : 'none';
+        }
+    }
+}
+
+
+
+function reset() {
+   
+	getAssigments(classID);
+	saveChanges();//use the new (fresh) call from the server and overwrite any changes!
+}
+
+
+function GPA() {//toggles between percentage, unweighted (out of 4.0), and weighed (out of 4.0, but can go above for AP's etc)
+	if(type < 2) {
+		type ++;
+	}
+	else {
+		type = 0;
+	}
+	
+
+	var gpaType = gpaTypes[type];
+	if(gpaType == "per") {//get GPA interms of percent!
+	var tables = document.getElementsByTagName("table");
+	var table = tables[0];
+	var num = 0;
+	var denom = 0;
+for (var r = 1; r < table.rows.length; r++) {
+    row = table.rows[r];
+	var grade = row.cells[7].innerHTML;
+	grade = grade.trim();			
+	
+	if(grade.length > 0) {
+		
+		gradeInt = grade.substring(0,4);
+		//alert(gradeInt); 		
+	num += parseFloat(gradeInt);
+	
+	denom += 1;
+}
+
+$('#grades').css("background-color","#9b9b9b");
+$('#grades').css("color","white");
+
+
+//ADD INVITE LINKS TO MESSAGEBOARD
+
+
+
+
+}
+
+gpa = num/denom;
+document.getElementById("GPA").innerHTML = "GPA: " + gpa.toFixed(2);
+
+}
+if(gpaType == "unweighted") {
+	var tables = document.getElementsByTagName("table");
+	var table = tables[0];
+	var num = 0;
+	var denom = 0;
+for (var r = 1; r < table.rows.length; r++) {
+    row = table.rows[r];
+	var grade = row.cells[7].innerHTML;
+	grade = grade.trim();			
+	
+	if(grade.length > 0) {
+		
+		gradeInt = grade.substring(0,4);
+		var letter  = getLetterGrade(gradeInt);
+		var gradeNum;
+		if(letter.includes("A")) {
+			gradeNum = 4;
+			if(letter.includes("-")) {//An A+ still counts as a 4.0, so I only need to account for an A- 
+				gradeNum -= .3;	
+			}
+		}
+		if(letter.includes("B")) {
+			gradeNum = 3;
+			if(letter.includes("+")) {
+				gradeNum += .3;	
+			}
+			if(letter.includes("-")) {
+				gradeNum -= .3;	
+			}
+		}
+		if(letter.includes("C")) {
+			gradeNum = 2;
+			if(letter.includes("+")) {
+				gradeNum += .3;	
+			}
+			if(letter.includes("-")) {
+				gradeNum -= .3;	
+			}
+		}
+		if(letter.includes("D")) {
+			gradeNum = 1;
+			if(letter.includes("+")) {
+				gradeNum += .3;	
+			}
+			if(letter.includes("-")) {
+				gradeNum -= .3;	
+			}
+		}
+		if(letter.includes("F")) {
+			gradeNum = 0;
+		}
+		
+		
+		//alert(gradeInt); 		
+	num += parseFloat(gradeNum);
+	
+	denom += 1;
+}
+
+$('#grades').css("background-color","#9b9b9b");
+$('#grades').css("color","white");
+
+
+//ADD INVITE LINKS TO MESSAGEBOARD
+
+
+
+
+}
+
+gpa = num/denom;
+document.getElementById("GPA").innerHTML = "Unweighted GPA: " + gpa.toFixed(2);
+		
+}
+if(gpaType == "weighted") {
+	var tables = document.getElementsByTagName("table");
+	var table = tables[0];
+	var num = 0;
+	var denom = 0;
+for (var r = 1; r < table.rows.length; r++) {
+    row = table.rows[r];
+	var grade = row.cells[7].innerHTML;
+	var className = row.cells[1].innerHTML;
+	grade = grade.trim();			
+	
+	if(grade.length > 0) {
+		
+		gradeInt = grade.substring(0,4);
+		//alert(gradeInt); 		
+		
+		var letter = getLetterGrade(gradeInt);
+		var gradeNum;
+		if(letter.includes("A")) {
+			gradeNum = 4;
+			if(letter.includes("-")) {//An A+ still counts as a 4.0, so I only need to account for an A- 
+				gradeNum -= .3;	
+			}
+		}
+		if(letter.includes("B")) {
+			gradeNum = 3;
+			if(letter.includes("+")) {
+				gradeNum += .3;	
+			}
+			if(letter.includes("-")) {
+				gradeNum -= .3;	
+			}
+		}
+		if(letter.includes("C")) {
+			gradeNum = 2;
+			if(letter.includes("+")) {
+				gradeNum += .3;	
+			}
+			if(letter.includes("-")) {
+				gradeNum -= .3;	
+			}
+		}
+		if(letter.includes("D")) {
+			gradeNum = 1;
+			if(letter.includes("+")) {
+				gradeNum += .3;	
+			}
+			if(letter.includes("-")) {
+				gradeNum -= .3;	
+			}
+		}
+		if(letter.includes("F")) {
+			gradeNum = 0;
+		}
+		if(className.includes("HN")) { 
+			gradeNum += .5;
+		}	
+		if(className.includes("AP")) { 
+			gradeNum += 1;
+		}			
+		//alert(gradeInt); 		
+	num += parseFloat(gradeNum);
+	
+	denom += 1;
+	
+
+	
+}
+
+$('#grades').css("background-color","#9b9b9b");
+$('#grades').css("color","white");
+
+
+
+}
+
+gpa = num/denom;
+document.getElementById("GPA").innerHTML = "Weighed GPA: " + gpa.toFixed(1);
+
+}
+
+	
+}
+
+function add() {//add new dummy assignment that can be manipulated
+	
+	var tables = document.getElementsByTagName("table");
+	
+	var table = tables[4];
+	
+
+	var row = table.insertRow(1);
+
+	// Insert new cells (<td> elements) at the 1st and 2nd position of the "new" <tr> element:
+	var cell0 = row.insertCell(0);
+	var cell1 = row.insertCell(1);
+	var cell2 = row.insertCell(2);
+	var cell3 = row.insertCell(3);
+	var cell4 = row.insertCell(4);
+	var cell5 = row.insertCell(5);
+	var cell6 = row.insertCell(6);
+	var cell7 = row.insertCell(7);
+	//NEED 5 COLUMNS BECAUSE TECHINCALLY THE OTHER ROWS ALSO HAVE 5 (CAUSE I GOT THEM FROM ASPENS SITE AND JUST HID THE OTHER ONES)
+	show_hide_column(0,false,4);//HIDE THE EMPTY COLUMNS SO IT LOOKS LIKE THREE!
+	show_hide_column(3,false,4);
+	show_hide_column(4,false,4);
+	//show_hide_column(6,false,4);
+
+	// Add some text to the new cells: (colored light blue so people can see that its been changed!)
+	cell1.innerHTML = "<span style='color: #4286f4'>Name</span>";
+	cell2.innerHTML = "youPick";
+	cell5.innerHTML = "100 / 100";
+	cell6.innerHTML = "<span style='color: #4286f4'>100%</span>";
+	cell7.innerHTML = "<button class='removeBttn' onclick='removeAssignment(1);'>X</button>";
+	drop();
+	
+	
+	for(var j = 2; j < table.rows.length; j ++) {//when this row is added all the rows above it will now be one more, so we need to incriment their buttons to reflect this!
+		var row = table.rows[j];
+		var newNum = j;//set to new row!
+		row.cells[7].innerHTML = "<button class='removeBttn' onclick='removeAssignment("+newNum+");'>X</button>";		
+	}
+	
+}
+
+
+
+function getLetterGrade(gradeToBeLettered) {
+
+	let parsed = parseFloat(gradeToBeLettered);
+	if (parsed >= 97.5) {
+		return "A+";
+	} else if (parsed >= 92.5) {
+		return "A";
+	} else if (parsed >= 90) {
+		return "A-";
+	} else if (parsed >= 87.5) {
+		return "B+";
+	} else if (parsed >= 82.5) {
+		return "B";
+	} else if (parsed >= 80) {
+		return "B-";
+	} else if (parsed >= 77.5) {
+		return "C+";
+	} else if (parsed >= 72.5) {
+		return "C";
+	} else if (parsed >= 70) {
+		return "C-";
+	} else if (parsed >= 67.5) {
+		return "D+";
+	} else if (parsed >= 62.5) {
+		return "D";
+	} else if (parsed >= 60) {
+		return "D-";
+	} else {
+		return "F";
+	}
+}
+
+
+
+function removeAssignment(i) {
+	var tables = document.getElementsByTagName("table");
+	
+	var table = tables[4];
+	
+	for(var j = i+1; j < table.rows.length; j ++) {//when this row is removed all the rows above it will now be one less, so we need to incriment their buttons to reflect this!
+		var row = table.rows[j];
+		var newNum = j-1;
+		row.cells[7].innerHTML = "<button class='removeBttn' onclick='removeAssignment("+newNum+");'>X</button>";		
+	}
+	table.deleteRow(i);	
+	calculateGrade();
+}
+
+var times = [];
+var periods = [];
+function sched () {
+document.getElementById('options').style.display = "none";
+	document.getElementById('classes').style.display = "none";
+	document.getElementById('newthing').style.display = "block";
+	document.getElementById("newthing").innerHTML = "<center><p id='loading'>Loading ...</p></center>";//loading indicator
+	
+	
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+		returnVal = returnVal; 
+		document.getElementById("newthing").innerHTML = returnVal;
+		document.getElementById("newthing").innerHTML = document.getElementsByClassName("listGridFixed")[0].innerHTML;//elminate top bar
+		document.getElementById("newthing").innerHTML =	document.getElementById('newthing').children[0].rows[0].innerHTML;
+		
+		document.getElementById("newthing").innerHTML = "<center><h1>Current Schedule:</h1></center>" + document.getElementById("newthing").innerHTML;
+		
+		var tables = document.getElementsByTagName('table');
+		
+		times.push("0:00");
+		periods.push("Before School");
+		
+		
+		var ones = tables[4].getElementsByTagName('td')[0].innerHTML + "<p>8:05-9:25</p>";
+		var oneb = tables[5].getElementsByTagName('td')[0].innerHTML + "<p>8:05-9:25</p>";
+		
+		times.push("8:05");
+		
+		periods.push(ones.substring(ones.indexOf("<br>"),ones.indexOf(",")));//<-- DOESNT FACTOR IN NAMES FOR BLACK DAY CLASSES!!!
+		
+		
+		var cms = tables[7].getElementsByTagName('td')[0].innerHTML + "<p>9:29-9:44</p>";
+		var cmb = tables[8].getElementsByTagName('td')[0].innerHTML + "<p>9:29-9:44</p>";
+		
+		times.push("9:29");
+		periods.push("CM");
+		
+		var twos = tables[10].getElementsByTagName('td')[0].innerHTML + "<p>9:48-11:08</p>";
+		var twob = tables[11].getElementsByTagName('td')[0].innerHTML + "<p>9:48-11:08</p>";
+		
+		times.push("9:48");
+		periods.push(twos.substring(twos.indexOf("<br>"),twos.indexOf(",")));
+		
+		
+		var lunchA = "Lunch A <p>11:12-11:42</p>";
+		var lunchB = "Lunch B <p>11:54-12:24 </p>";
+		var lunchC = "Lunch C<p>12:36-1:06</p>";
+		
+		var threes = tables[13].getElementsByTagName('td')[0].innerHTML;
+		var threeb = tables[14].getElementsByTagName('td')[0].innerHTML;
+		
+		
+		
+//DOESN'T HANDLE PEOPLE WITH ALTERNATING 3RD PERIOD CLASSES!
+		var room = threes.substring(threes.lastIndexOf("<br>")- 4,threes.lastIndexOf("<br>"));
+var A;
+var B;
+var C;
+	if(room[1] == "6" || room[0] == 1 || threes.includes("PE") == true) {//if first floor (Ringe) or Arts building then lunch A
+		
+		A  = "<tr id='lunch' ><td>" +lunchA+"</td><td>" +lunchA+"</td></tr><tr><td>"+threes+"<p>11:46-1:06</p></td><td>"+threeb+"<p>11:46-1:06</p></td></tr>"; 
+		B = "";
+		C = "";
+		
+		times.push("11:12");
+		periods.push("Lunch A");
+		times.push("11:48");
+		periods.push(threes.substring(threes.indexOf("<br>"),threes.indexOf(",")));
+		
+				
+	}
+	if((room[0] == "2"|| room[0] == "3") && room[1] !== "6" ) {//If 2nd or 3rd floor and NOT ARTS then B (NOT SCIENCE CLASSES <-- ADD) 
+		A  = ""; 
+		B = "<tr id='B'><td>"+threes+"<p>11:12-11:52</p></td><td>"+threeb+"<p>11:12-11:52</p></td></tr><tr id='lunch'><td>" +lunchB+"</td><td>" +lunchB+"</td></tr><tr id='B'><td>"+threes+"<p>12:26-1:06 </p></td><td>"+threeb+"<p>12:26-1:06</p></td></tr>";
+		C = "";
+		
+		
+		times.push("11:12");
+		periods.push(threes.substring(threes.indexOf("<br>"),threes.indexOf(",")));
+		times.push("11:54");
+		periods.push("Lunch B");
+		times.push("12:26");
+		periods.push(threes.substring(threes.indexOf("<br>"),threes.indexOf(",")));
+		
+		
+	}
+		
+		
+	if(((room[0] == "4"|| room[0] == "5") && room[1] !== "6" ) || ((room[0] == "2"|| room[0] == "3") && room[1] == "6") && threes.includes("PE") == false) {//4th, 5th floor Ringde OR 2nd, 3rd Arts  (NEED TO INCLUDE BIO) 
+		C  = "<tr><td>"+threes+"<p>11:12-12:32</p></td></td><td>"+threeb+"<p>11:12-12:32</p></td></td></tr><tr id='lunch' ><td>" +lunchC+"</td><td>" +lunchC+"</td></tr>"; 
+		B = "";
+		A = "";
+		
+	
+		times.push("11:12");
+		periods.push(threes.substring(threes.indexOf("<br>"),threes.indexOf(",")));
+		times.push("12:32");
+		periods.push("Lunch C");
+		
+	}	
+	
+		
+		var fours = tables[16].getElementsByTagName('td')[0].innerHTML + "<p>1:10-2:30 </p>";
+		var fourb = tables[17].getElementsByTagName('td')[0].innerHTML + "<p>1:10-2:30 </p>";
+		
+		times.push("13:10");
+		periods.push(fours.substring(fours.indexOf("<br>"),fours.indexOf(",")));
+		
+		
+		var tab  = "<table>  <tr><td>Black Day:</td><td>Silver Day:</td></tr>    <tr><td>"+ones+"</td><td>"+oneb+"</td></tr>  <tr><td>"+cms+"</td><td>"+cmb+"</td></tr>     <tr><td>"+twos+"</td><td>"+twob+"</td></tr> "+A + B + C+" <tr><td>"+fours+"</td><td>"+fourb+"</td></tr></table>";
+		document.getElementById("newthing").innerHTML =  tab;
+		
+		
+		times.push("14:30");
+		periods.push("After School");
+		
+		
+		//console.log(fourb);
+		
+		//show_hide_column(1,false,0);//HIDE THE EMPTY COLUMNS SO IT LOOKS LIKE THREE!
+	
+	
+		
+		/*if(minutesOfDay("3:12") > minutesOfDay("2:12")) {
+		
+			alert("yes");
+		}*/
+	
+			var time = new Date();
+			var now = time.getHours() + ":" + time.getMinutes();
+			//now = "13:10";
+	var day = time.getDay();
+	
+	
+	if(day == 0 || day == 6) {
+		document.getElementById("Period").innerHTML = "Weekend";
+		
+	} 
+	else {
+	
+			for(var w = (times.length - 1); w > 0; w --) {
+			//alert(w);
+			//alert(times[w]);
+			if(minutesOfDay(times[w]) - 5 < minutesOfDay(now)) {
+				var timeLeft = "";
+				if(w !== times.length - 1 && w !== 0) {
+				timeLeft = minutesOfDay(times[w+1]) - minutesOfDay(now) - 5; //time till next period!
+				timeLeft = " ("+timeLeft+" min Left)";
+				}
+				
+				/*var nam = periods[w];
+				
+				if(periods[w].includes("First")) {
+					nam = classes[0];
+					
+				}
+				if(periods[w].includes("Second")) {
+					nam = titles[1];
+					
+				}
+				if(periods[w].includes("Third")) {
+					nam = titles[2];
+					
+				}
+				if(periods[w].includes("Fourth")) {
+					nam = titles[3];
+					
+				}*/
+				
+				document.getElementById("Period").innerHTML = "Current Period: " +  periods[w] + timeLeft;
+				break;
+			}
+			
+			
+		}
+		
+	}
+		
+	
+}
+		
+	getText.send(encodeURI('schedule='));//asks for text to be sent down
+	return false;
+}
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+function assig(oid,type) {//calls code equivilent to initQuarters(); and then after AJAX response, calles getAssig(); which actually gets the assig
+	
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+	
+	
+		getAssig(oid,type);
+	
+}//end of if response		
+	getText.send(encodeURI('send='));//asks for text to be sent down
+		return false;
+
+
+		
+	
+}
+
+
+function getAssig (oid,type) {
+	//document.getElementById("newthing").innerHTML = "<center><p id='loading'>Loading ...</p></center>";//loading indicator
+	
+	document.getElementById('options').style.display = "none";
+	document.getElementById('classes').style.display = "none";
+	document.getElementById('newthing').style.display = "block";
+	
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+		
+		//returnVal = "<center><h1>Recent Assignments:</h1></center>" + returnVal.substring(returnVal.indexOf("listGridFixed") + 16,returnVal.indexOf('options')); 
+	
+	if(type == 0) {//get the statistics
+		document.getElementById("newthing").innerHTML = returnVal;
+		var tables = document.getElementsByTagName('table'); 
+		var table = tables[27].outerHTML;		
+			document.getElementById("newthing").innerHTML = "<button  class='button' onclick='back();'>Back</button>" + table;
+			tables[1].deleteRow(0);//now that I cleared out all the other tables returned.. this is the number 1 table!
+		}
+		
+		
+		if(type == 1) {//get the denominator for stream
+			returnVal = returnVal.substring(returnVal.indexOf("Aspen +"));
+			returnVal = returnVal.substring(returnVal.indexOf("Aspen +"));//get second instance
+			returnVal = returnVal.substring(returnVal.indexOf("</center>"));
+			
+			returnVal = returnVal.substring(0,returnVal.indexOf("<script"));
+		//	nom = returnVal;
+		//document.getElementById("newthing").innerHTML = returnVal;
+		
+		var tables = document.getElementsByTagName("table");
+		var table = tables[1];
+		table.rows[counter].cells[0].innerHTML += returnVal;
+		console.log(returnVal + "," + counter);
+		counter ++;
+		denom();
+		}
+		
+			
+	}
+	if(type == 0) {//get the statistics
+		getText.send(encodeURI('assigDetail=' + oid));//asks for text to be sent down
+	}
+	if(type == 1) {//get the denominator for stream
+		getText.send(encodeURI('denominator=' + oid));//asks for text to be sent down
+	}
+		return false;
+	}
+
+
+	function back () {//Go back to assignments after viewing stats!
+		document.getElementById('options').style.display = "block";//show these again
+		
+		
+		if(classes.includes(classID)) {
+		
+			document.getElementById("newthing").innerHTML = "<table></table><table></table><table></table>" + savedStates[classes.indexOf(classID)];//adds other table tags so that the number will still be 4 (consistent) event though when recalling from save it doesnt need other tables
+			drop();
+		
+		}
+		
+		else {
+		
+			getAssigments(classID);
+			console.log(classID);
+		
+		}
+	}
+
+
+
+
+
+function quarter (q) {
+	var quarters = ["GTM0000000C1s8","GTM0000000C1s9","GTM0000000C1sA","GTM0000000C1sB"];
+	var quarter = quarters[q-1];
+	document.cookie = "quarter="+quarter;
+	/*document.getElementById("newthing").innerHTML = "<center><p id='loading'>Loading ...</p></center>";//loading indicator
+	
+	document.getElementById('options').style.display = "none";
+	document.getElementById('classes').style.display = "none";
+	document.getElementById('newthing').style.display = "block";
+	*/
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+		
+		//returnVal = "<center><h1>Recent Assignments:</h1></center>" + returnVal.substring(returnVal.indexOf("listGridFixed") + 16,returnVal.indexOf('options')); 
+		var table = document.getElementsByTagName('table')[0];
+		
+		table.innerHTML = returnVal;
+		//document.getElementById("newthing").innerHTML = returnVal;
+		
+		/*returnVal = table.getElementsByTagName("table")[0].outerHTML;
+		table.innerHTML = returnVal;*/
+		
+		//var table = document.getElementsByTagName("table")[1];
+		show_hide_column(0,false,0);
+		show_hide_column(2,false,0);
+		show_hide_column(3,false,0);
+		show_hide_column(4,false,0);
+		show_hide_column(5,false,0);
+		//show_hide_column(6,false,0);
+		show_hide_column(9,false,0);
+		show_hide_column(10,false,0);
+	 
+		table.deleteRow(0);
+		
+	table.deleteRow(-1);//FOR SOME REASON, GETTING OLD QUARTERS CAUSES 2 EXTRA ROWS TO BE ADDED, REMOVE THEM!!!
+		table.deleteRow(-1);
+
+	
+	
+		var row = table.insertRow(0);
+
+		// Insert new cells (<td> elements) at the 1st and 2nd position of the "new" <tr> element:
+		var cell1 = row.insertCell(0);
+		var cell2 = row.insertCell(1);
+		var cell3 = row.insertCell(2);
+		var cell4 = row.insertCell(3);
+
+
+		// Add some text to the new cells:
+		
+		cell1.innerHTML = "Class <select id='quat' onchange='quarter(value);'><option value='1'>Q1</option><option value='2'>Q2</option><option value='3'>Q3</option><option value='4'>Q4</option>";
+		cell2.innerHTML = "Calculated Grade";
+		cell3.innerHTML = "Grade";
+		cell4.innerHTML = "Absences"; 
+		
+		document.getElementById("quat").selectedIndex = (q-1).toString();
+		
+		
+		for(var i = 1; i < table.rows.length; i ++) {
+			table.rows[i].cells[6].innerHTML = table.rows[i].cells[7].innerHTML;
+			
+				
+			
+		}
+		type = 2;
+		GPA();//UPDATE QUARTERLY GPA	
+		
+}
+		
+	getText.send(encodeURI('quarter='+ quarter));//asks for text to be sent down
+	return false;
+}
+
+
+
+
+
+
+/*function getPos() {
+    var sel = document.getSelection(),
+        nd = sel.anchorNode,
+        text = nd.textContent.slice(0, sel.focusOffset);
+
+    var line=text.split("\n").length;
+    var col=text.split("\n").pop().length;
+	return line;
+}*/
+
+
+
+
+
+function clickCell() {//adds click handlers to each row so that the row can be selected for test corrections to be applied!
+	var tables = document.getElementsByTagName("table");
+
+	var table = tables[4];
+ for (var i = 0; i < table.rows.length; i++) {
+            table.rows[i].addEventListener('click', function(){
+				if(corrections == true) {
+				applyCorrections(this);
+				}
+				
+				if(predictions == true) {
+				applyPredictions(this);
+				}
+            })
+       
+    }
+}
+
+//------------------------------TEST CORRECTIONS---------------------
+
+function testCorrections() {//CALLED WHEN BUTTON IS PRESSEDsets up user (and vars) so that corrections can occur
+	alert("Click on the row that you'd like to apply test corrections to!");
+	corrections = true;//means that now when user clicks on row, it will do something!
+}
+
+
+function applyCorrections (row)  {
+var percent = prompt("Enter the percent of corrections that your teacher allows for the assigmennt that you most recently edited. (E.g. 25)");
+percent = percent/100;
+
+frac = row.cells[5].innerHTML;
+frac = frac.split("/");
+//alert(frac);
+
+var ptsBack = (1 - parseFloat(frac[0])/parseFloat(frac[1]))*frac[1]*percent;
+//alert(ptsBack);
+var newNum = parseFloat(frac[0]) + ptsBack;
+//alert(newNum);
+
+row.cells[5].innerHTML = newNum + "/" + frac[1];
+calculateGrade();
+corrections = false; //User will have to click "Test Corrections" button again before they can apply more corrections!
+}
+
+
+
+//-----------------PREDICT-----------------------
+
+function pre() {
+	alert("Click on the row that you'd like to alter to achieve your target grade!");
+	predictions = true;//means that now when user clicks on row, it will do something!
+	
+}
+
+
+function applyPredictions (row)  {
+
+	var grade =	prompt("Enter the grade you'd like to have overall on the class: (E.g '94' or 'A')");
+	if(grade !== null) {
+		row.cells[5].innerHTML = "100/100";//If it says "Ungraed, or if it has a percent, doesn't matter, just do this to begin!!
+		
+		var cata = row.cells[2].getElementsByTagName('select')[0].selectedOptions[0].value;//get selected option on select button
+		cata = cata.substring(0,cata.indexOf("(") - 1);//Had to add this line because the select element now included the weights for the user to see (e.g. Labs (18.2%))
+
+	//A's
+	if(grade == "A+" || grade == "A +") {
+		
+		grade = "97";
+	}
+	if(grade == "A") {
+		
+		grade = "92.5";
+	}
+	if(grade == "A-" || grade == "A -") {
+		
+		grade = "90";
+	}
+	//B's
+	if(grade == "B+" || grade == "B +") {
+		
+		grade = "88";
+	}
+	if(grade == "B") {
+		
+		grade = "85";
+	}
+	if(grade == "B-" || grade == "B -") {
+		
+		grade = "82";
+	}
+	//C's
+	if(grade == "C+" || grade == "C +") {
+		
+		grade = "79";
+	}
+	if(grade == "C") {
+		
+		grade = "77";
+	}
+	if(grade == "C-" || grade == "C -") {
+		
+		grade = "72";
+	}
+	//D's
+	if(grade == "D+" || grade == "D +") {
+		
+		grade = "68";
+	}
+	if(grade == "D") {
+		
+		grade = "65";
+	}
+	/*if(grade == "D-" || grade == "D -") {
+		
+		grade = "90";
+	}*/
+	//F
+	if(grade == "F") {
+		
+		grade = "50";
+	}
+	
+	
+	
+	
+	console.log("PREDICTION!!!");
+
+	var totalWeight = 0;
+	var grades = calculateGrade();
+	var otherNums = 0;
+	var specialN = 0;
+	var specialD = 0;
+	var specialW = 0;
+
+	for(var i = 0; i < grades.length; i ++) {
+	
+		var fraction = grades[i].split("/");
+	
+		var weight = weights[i];
+		weight = parseFloat(weight.substring(0, weight.length - 1)); //remvove the percent sign and convert to decimal
+		if(fraction[1] !== "0") {//if assigmnet has a grade
+			totalWeight += weight;
+	
+		if(titles.indexOf(cata) !== i) {//in other words,if this is NOT the selected category for simulation,
+			otherNums += (parseFloat(fraction[0])/parseFloat(fraction[1]))*weight;
+			//console.log(parseFloat(fraction[0])/parseFloat(fraction[1]));
+			}
+			else {
+				specialN = fraction[0];
+				specialD = parseFloat(fraction[1]) /*+ 100*/;//commented out +100 because its now predicted the change in an existing grade to produce the desired overall grade 
+				specialW = weight;
+			}
+		
+			
+		}
+		if(fraction[1] == "0" && titles.indexOf(cata) == i) {//special case where the category for precictiosn has no other assigmnets in it!
+			specialN = 0;//assumes that no other assignments are in catagory
+			specialD = 100;
+			specialW = weight;
+			totalWeight += weight;//but adds weight to total denom because our 'mystery' assigmnet is being added!
+			
+		}
+	
+	
+	}
+	
+	console.log(grade);
+	console.log(otherNums);
+	console.log(totalWeight);
+	console.log(specialN);
+	console.log(specialD);
+	console.log(specialW);
+	
+	var score = ((((grade/100*totalWeight) - otherNums)*specialD/specialW) - specialN);//this is 
+	
+	
+	
+	
+	/*
+	var num = frac[0];
+	var denom = frac[1];
+	//alert(num);
+	//alert(denom);
+
+	var weight = weights[titles.indexOf(cata)];
+	weight = parseFloat(weight.substring(0,weight.length - 1))/100; //remvove the percent sign and convert to decimal
+
+	denom += 100*weight;
+	var score = (((grade/100)*denom) - num)/weight;
+	*/
+
+	var finalTop = parseFloat(row.cells[5].innerHTML.trim().split("/")[0]) + parseFloat(score.toFixed(2));
+	//var finalTop = parseFloat(score.toFixed(2));
+	row.cells[5].innerHTML =  finalTop + "/ 100";
+
+	predictions = false; //now that job is done, set var back to normal! --> forgot "s"
+	calculateGrade();//Update grade!
+	
+	}
+}
+
+
+//--------------------------------------------------MISCELLANEOUS FUNCTIONS------------------------
+
+
+
+ function minutesOfDay (m){
+	
+	m = m.split(':');
+	
+	
+	h = parseFloat(m[0]);
+		
+	
+  return parseFloat(m[1]) + h* 60;
+}
+
+
+
+
+function logOff () {//--------------LOG OFF------------ (calls php which deletes notification token from DB)
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+		
+		document.getElementById("newthing").innerHTML = returnVal;
+	
+		
+	
+}
+		
+	getText.send(encodeURI('logoff='));//asks for text to be sent down
+	return false;
+}
+
+
+function stream () {//-------------GET STREAM------------
+	document.getElementById("newthing").innerHTML = "<center><p id='loading'>Loading ...</p></center>";//loading indicator
+	
+	document.getElementById('options').style.display = "none";
+	document.getElementById('classes').style.display = "none";
+	document.getElementById('newthing').style.display = "block";
+	
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+		
+		//returnVal = "<center><h1>Recent Assignments:</h1></center>" + returnVal.substring(returnVal.indexOf("listGridFixed") + 16,returnVal.indexOf('options')); 
+		document.getElementById("newthing").innerHTML = returnVal;
+		
+	
+		
+	
+}
+		
+	getText.send(encodeURI('stream='));//asks for text to be sent down
+	return false;
+}
+
+
+function attendance () {//--------GET ATTENDACE----------
+	document.getElementById("newthing").innerHTML = "<center><p id='loading'>Loading ...</p></center>";//loading indicator
+	
+	document.getElementById('options').style.display = "none";
+	document.getElementById('classes').style.display = "none";
+	document.getElementById('newthing').style.display = "block";
+	
+    var getText = new XMLHttpRequest();
+
+    getText.open('POST', 'aspen.php');
+    getText.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    getText.onload = function() {
+    	if (getText.status === 200)
+  		var returnVal = getText.responseText;
+		
+		//returnVal = "<center><h1>Recent Assignments:</h1></center>" + returnVal.substring(returnVal.indexOf("listGridFixed") + 16,returnVal.indexOf('options')); 
+		document.getElementById("newthing").innerHTML = returnVal;
+	
+		
+	
+}
+		
+	getText.send(encodeURI('attendance='));//asks for text to be sent down
+	return false;
+}
+
+
+
+
+
+
+</script>
+
+
+
+<!---------------------------------------------LOGON FORM---------------------------->
+<form id="signin" method="post">
+	<center>
+		<h1 id="signinHeader" style="color: #23822b;">Aspen +</h1>
+		<p id='cred' style="color: #bcbcbc;">*Use your Aspen Credentials*</p>
+    		<p><input type="text" name="username" id="username" placeholder="Student ID"></p>
+		
+		
+     	<p><input type="password" name="password" id="password" placeholder="Password"></p>
+		
+	
+     <p><input style="background-color: #4CAF50" type="submit" name="submit" value="Log In" autofocus/></p>
+		</center>
+ 	</form>
+
+
+<!-----------------------------------------------CSS STYLESHEET-------------------------------->
+<style>
+	
+	body {
+		
+		font-family: "Trebuchet MS";
+		
+		font-size: 120%;
+		/*background-image: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);*/
+		background: linear-gradient(to top, #0a5406 0%, #43823f 100%);
+	}
+	
+	h1 {
+		
+		font-family: "Arial";
+		
+	}
+	
+	#header {
+		margin-top: 20px;
+		font-size: 160px;
+		-webkit-background-clip: text;
+			-webkit-text-fill-color: transparent;
+	    background-image:  linear-gradient(to top, #0a5406 0%, #43823f 100%);
+		margin-bottom: 50px;/*keep tables below logo*/
+		
+	}
+	tr {
+		background-color: white;
+		color: black;
+		
+	}
+	tr a {
+		color: black;
+		text-decoration: none;
+		
+	}
+	tr:hover {
+		background-color: #f5f5f5;
+		
+	}
+
+	
+	#logo {
+		margin-top: 20px;
+		float: left;
+		border-radius:30px;
+		display: none;
+	}
+	
+	#loading {
+		color: white;
+		font-size: 30px;
+		padding: 120px;
+		background-color: #cecece;
+  	 	border: 1px solid #ddd;
+		
+	}
+	
+	
+	table {
+	  width: 100%;
+	  border: 1px solid #ddd;
+	}
+
+	tr {
+	  height: 50px;
+	}
+	
+	th, td {
+	    border-bottom: 1px solid #ddd;
+		padding-left: 3px;/*So text doesn't start right at edge*/
+	}
+	
+	#stream th {
+		color: white;
+		background-color: #23822b;
+	    border-bottom: 3px solid #ddd;
+			
+	}
+	tr:first-child td { 
+	background-color: #23822b;	
+	color: white;
+    border-bottom: 3px solid #ddd;
+	}
+	
+.button {
+  background-color: #23822b;
+  /*#4CAF50; Bright Green from W3Schools */
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+font-family: "Trebuchet MS";
+ 
+}
+
+
+.navbtn {
+	/*font-family: "Trebuchet MS";*/
+    background-color: #23822b;
+    /*#4CAF50; Bright Green from W3Schools */
+    border: none;
+    color: grey;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+}
+
+
+	
+	ul {
+	  list-style-type: none;
+	  margin: 0;
+	  padding: 0;
+	  overflow: hidden;
+	  background-color: #f3f3f3;
+	  border: 1px solid #e7e7e7;;
+	/*  color: grey;*/
+      overflow: hidden;
+	  
+	}
+
+	li {
+	  float: left;
+	  /*padding: 15px 32px;*/
+	  /*border: 1px solid;*/
+	 /* color: grey;*/
+	}
+
+	#right {
+		float: right;
+	}	
+		
+	select {
+	    background-color: #d8d8d8;
+	    border: none;
+		font-size: 15px;
+		padding: 10px 5px 10px 5px;
+	   	 -webkit-appearance: none;
+	     -webkit-border-radius: 7px;			 
+	}
+	/*li a {
+	  display: block;
+	  color: grey;
+	  text-align: center;
+	  text-decoration: none;
+	}*/
+
+	/* Change the link color to #111 (black) on hover */
+	/*li a:hover {
+	  background-color: #111;
+	}*/
+	
+	
+	#options {
+		margin-top: 15px;
+		
+	}
+	
+	#navbar {
+		margin-bottom: 20px;
+	}
+	#navbar button {
+  	  background-color: #f3f3f3;
+	 /* color: grey;*/
+		
+	}
+	.navbtn:hover {
+  	  background-color: #23822b!important;
+	  color: white!important;
+		
+	}
+	
+	
+	
+	
+	#logOff {
+		margin-bottom: 0px;
+		
+	}
+	
+	#signin {
+		background-color: white;
+		border-radius: 20px;
+		margin-top: 3%;
+		padding-bottom: 10%;
+		padding-top: 10%;
+		margin-left: 20%;
+		margin-right: 20%;
+		
+	}
+	
+	#signinHeader {
+		padding-bottom: 30px;
+		
+	}
+	
+	input[type=text], input[type=password] {
+		width: 60%;
+		border-radius: 80px;
+		background-color: #e0e1e2;
+		padding: 15px 30px 15px 30px;
+		font-size:1.25em;
+	} 
+
+	
+	
+	 input[type=submit] {
+	 	
+	     background-color: #23822b; /* Green */
+	     border: none;
+	     color: white;
+		 padding-left: 25%;
+		 padding-right: 25%;
+		 padding-top: 20px;
+		 padding-bottom: 20px;
+		 
+		 margin-top: 10px;
+	     text-align: center;
+	     text-decoration: none;
+	     font-size: 24px;
+		 border-radius: 40px;
+	     -webkit-appearance: none;
+		
+	 }
+	 
+	
+	 .inviteLink {
+	      background:none!important;
+	      color:blue;
+	      border:none; 
+	      padding:0!important;
+	      font: inherit;
+	      /*border is optional*/
+	      /*border-bottom:1px solid blue; */
+	      cursor: pointer;
+	 }	
+	
+.removeBttn {	 
+     background:none!important;
+     color:red;
+     border:none; 
+     padding-left: 10px!important;
+     margin-right: 10px!important;
+     font: inherit;
+     /*border is optional*/
+     /*border-bottom:1px solid blue; */
+     cursor: pointer;
+} 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 @media only screen and (max-width: 800px),(max-device-width: 800px) {/*mobile signin field, keeping navbar the same!*/
+
+		
+	
+		 input[type=text],input[type=password] {
+					font-size:2.3em;
+					width: 85%;
+					padding: 4%;
+					margin-top: 10%;
+	 		
+		 	 	} 
+				
+				#logo {
+					
+					display: none!important;
+				}
+
+				.navbtn{
+					font-size: 130%;
+				}
+				
+				#logoffBttn {
+					font-size: 130%;
+					
+				}
+				
+				#GPA {
+					font-size: 150%;
+					
+				}
+			
+		 input[type=submit] {
+			 margin-top: 12%;
+			 width: 85%;
+			font-size:1.5em;
+			 padding: 5%;
+			 border-radius: 90px;
+			 margin-bottom: 10%;
+		    
+		 }
+		 
+		 
+		 #signinHeader {
+			 margin-bottom: 4%;
+			 font-size: 3.5em;
+			
+		 }
+	 	#signin {
+			margin-top:25%;
+			margin-left: 5%;
+			margin-right: 5%;
+		}
+		
+		
+		#cred {
+			font-size:1.3em;
+		 margin-bottom: 3%;
+		}
+	 
+	 
+	 #newThing {
+	 	
+		overflow-x:auto;
+	 }
+}
+
+
+
+@media only screen and (max-width: 730px),(max-device-width: 730px) {
+/*	li {
+		float: none;
+	    text-align: center;
+		
+	}
+	#right {
+		float: none;
+	}
+	#button {
+		
+		margin-top: 20px;
+	}
+	#navbar li:hover {
+		background-color: #23822b;
+		color: white;
+		
+	}*/
+}	
+	</style>
+
+
+<script>
+	//Add:----------------
+	//Predictive feature (what would I have to get to bring my grade to an A) √√√√√ <-- make stop if user clicks "cancel" on either alerts √√√√√√
+	//Round to 2 decimal places for percents,GPA, and calculated grades √√√√√√
+	//Factor in when catagories are not in use (E.g. midterm is not in, but its not graded as if I got a zero in that catagory...) √ <-- modify predict feature to account for this! √√√√√√
+	//!!!!!MAKE HANDLE INCORRECT PASSWORD (RN, JUST GOES TO BLANK SCREEN) √√√√√√√
+	//Corrections calculator √√√√√√
+	//Invite links to messageboards so people can discuss with others in their class! √√√√√√√
+	//Dropdown menu for catagories (works in table and predict) √√√√√√
+	//Make work on mobile screen (signin field fit,tables fit) √√√√√√√
+
+	//GPA from all quarters (select classes from other quarters AND see all pages of assigments, not just first)
+
+	//Optional sarcastic feedback
+	//Schedule feature, integrate with CRLS clock to show what period you should be in √
+	//Add colors to tables (when grade is modified/new assignment is added, highlight grade);
+	//Stream feature, shows all most recent assignments √ <-- when you click, show class 
+
+	//App:
+	//Fix scaling issue where its more zoomed in on safari √ (Although still left the "if overflow, then add scrollbar" thing just in case!)
+	//Noticiations √
+	//Associated domain (so apple knows to use saved password from website with app, and vice versa) <-- Also, so I can do meta banner "Donwload on App Store"
+	//When user clicks on notification, load appropriate class!
+</script>

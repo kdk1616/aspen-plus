@@ -77,10 +77,6 @@ $connection = new PDO($dsn, $username, $password, $options);
 if(isset($_POST['submit'])) {//-------------LOGIN FORM (INITIAL FUNCTION!) CALLED ONLOAD------------------
 	$username = $_POST['username'];
 	$password = $_POST['password'];
-	/*
-	$username = "8004542";
-	$password = "SchoolsOut4Summer";
-*/
 
 
 
